@@ -1,0 +1,145 @@
+首先是安装的问题：
+首先 官网所要求下载的.net框架4 不知道为什么我已经有了（可能是VS2017的关系）
+其次windb 官网给的win10 的sdk不兼容，我又下在了一个win7的sdk，但是在安装的时候失败了。
+所以我还是在用我电脑上原有的windbg，关于符号表的问题，官网说现在不再需要下载，换在线的，但是我不知道我设置的对不对，反正目前看来还能用
+
+
+
+书上说peach元素的各个属性是基本固定的：
+GeneralConf	定义基本配置信息
+DataModel	定义数据模型
+StateModel	描述如何向目标程序发送／接收数据
+Agent		定义代理和监视器
+Test and Run configuration
+
+————————————————
+1.首先GeneralConf中书上说所有的peach pit文件都要包含default.xml这个文件，
+在hellworld中只需要写
+<Include ns="default" src="file:defaults.xml" />，
+但是我在peach3中没有找到这个defaults.xml这个文件，只找到了template.xml这个文件，
+所以如果运行defaults，就会报错，
+现在尝试用template代替,还是报错
+*经查http://www.freebuf.com/sectool/120650.html，V3版本强制包含已经去掉了
+
+
+2.在test and run configuration中，书中的run元素在peach中无效？不知道为什么？去掉后可以运行，但是整个程序会崩溃。
+*经查http://www.freebuf.com/sectool/120650.html，v3版本只要test元素
+而且V3中，所有Test name都命名为Default，不然会报错。
+
+run中的logger元素在V3版本中作为Test的子元素，写在Test中即可。
+<Test name="Default">
+
+....
+
+<Logger class="Filesystem">
+
+<Param name="Path" value="logs" />
+
+</Logger>
+
+</Test>
+
+
+
+3.在publisher中 官方用这个<Publisher class="Console" />，书上用这个<Publisher class="stdout.Stdout" />，效果相同
+*stdout.Stdout(版本2)/Console(版本3)
+
+
+
+
+4.DataModel
+DataModel 元素是 Peach 根元素的子节点，常用属性主要是以下两个：
+
+	4.1.name——相当于起一个”变量名“
+
+	4.2.ref——引用标签，是否继承于某一个已定义的DataModel（这里继承的含义类似于面向对象中的继承，被引用的 DataModel 将为作为新的 DataModel 的基数据 ，可以重用或更新子元素）
+
+	DataModel定义了某一格式类型文件的数据模型，包括数据结构、数据关系等，常用的子元素有以下几种：
+
+	4.1.String——字符串型，包含了name，length等常用属性（V3:需要特别注意，在版本2中表示字符串不可变的isStatic属性在版本3中更名为token）
+
+	4.2.Number——数据型，可以是8、16、32或64字节的数据，并通过size属性来设定，同时也包含name属性作为名称
+
+	4.3.Blob——无具体数据类型，通常用来定义不明类型的数据，包含name、length、value等属性
+
+	4.4.Block——用于对数据进行分组，用来组合一个或者多个的其他元素 ，比如 Number 或者 String，有点类似于DataModel，只不过两者的位置不同。
+
+
+
+
+
+√	把官网的tutorial看完，——还是有很多没看懂
+√	看一下关于statemodel 中action中如何使用Param——官方文档说action有param元素，但是没有介绍param中datamodel 的ref在statemodel之前要定义成什么。
+	fuzz pdf
+√	在正常模式下运行看看能不能测试到2345看图的bug——我用修改的模板跑2345打开png，
+√	能不能在先提问，看看哪个param的问题——param没有问题，就是40行的datamodel定义的问题了。
+	GUI
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

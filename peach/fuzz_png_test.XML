@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Peach xmlns="http://peachfuzzer.com/2012/Peach" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://peachfuzzer.com/2012/Peach ../peach.xsd">
+	
+	
+	
+<!-- 定义Chunk的数据结构 -->
+<DataModel name="Chunk">
+<!-- Chunk第一部分：uint32 length -->
+	<Number name="Length" size="32" signed="false" endian="big">
+		<Relation type="size" of="data"/>
+<!--这里有个问题：这里的data是png格式中chunk中的data，那么这里定义这个length的时候他是如何识别这个data的？因为前面没有定义data啊，还是说peach有自己的一套文件格式识别系统，知道这个data就是png中chunk中的data？-->
+<!--我试了一下将"data"改为"test"，发现运行也没问题-->	
+<!--也就是说这个data命名为什么都没问题，下面引用（48行）由chunk组成的pngdatamodel的时候，action会先打开一个png文件，然后按照我们定义的数据结构来读取？应该是这个意思吧？理解又不理解-->
+	
+	</Number>
+<!-- Chunk第二和第三部分：type code,4个英文字母；由第一部分length指定长度的Data块-->
+	<Block name="TypeAndData">
+		<String name="Type" length="4"/>
+		<Blob name="Data"/>
+	</Block>
+<!-- Chunk第四部分：crc校验码 -->
+	<Number name="CRC" size="32" endian="big">
+		<Fixup class="Crc32Fixup">
+			<Param name="ref" value="TypeAndData"/>
+		</Fixup>
+	</Number>
+</DataModel>
+
+<!-- 将PNG文件视为一个8字节签名+若干个Chunk -->
+<DataModel name="Png">
+	<Blob name="pngSignature" valueType="hex" value="89 50 4E 47 0D 0A 1A 0A" token="true"/><!--istatic在V3中改为token-->
+	<Block ref="Chunk" minOccurs="1" maxOccurs="1024"/><!--这里用ref来引用上面已经定义的名为Chunk的DataModel-->
+</DataModel>
+	
+<!--.................................................................................................-->	
+
+	<!--如果不加这个datamodel，第54行的datamodel就会报错，无法解析-->
+	<!--这个datamodel的分析见下面action type call-->	
+	<DataModel name="ParamA">
+		<String name="Value"/>
+		<!--String name="Value" value="xxx"??-->
+		<!--String name="Value" value="xxx" token="true"??-->
+	</DataModel>
+	
+<!-- StateModel完成三件事：修改文件生成畸形文件；把该文件关闭；调用pngcheck打开生成的畸形文件； -->
+<StateModel name="TheState" initialState="Initial"><!--fuzz网络协议的时候模板可能不一样，见http://community.peachfuzzer.com/v3/StateModel.html-->
+	<State name="Initial">
+		<!-- 输出png文件 -->
+		<Action type="output"><!--output:通过publisher发送或写入输出。需要DataModel，可选择提供数据集。-->
+			<DataModel ref="Png"/><!--这里又再次引用上面定义的名为Png的DataModel-->
+			<!-- 读入png文件 -->
+			<Data name="data" fileName="D:\peachFuzzer\peach-3.1.124-win-x64-release\test.png"/><!--读入？应该是读入一个正常的文件吧？这里假定是正常的文件-->
+			<!--data元素用于创建默认数据集并将其加载到DataModel中-->
+		</Action>
+		
+		<!-- 关闭png文件 -->
+		<Action type="close"/>
+		<!-- 调用pngcheck进程 -->
+		<Action type="call" method="C:\Program Files (x86)\2345Soft\2345Pic\2345PicViewer.exe" publisher="Peach.Agent"><!--methed修改为pngcheck的路径-->
+		
+			<!--下面这里开始有问题了-->
+			
+			<!-- Param用来存放传递给pngcheck.exe的参数，即畸形文件的文件名 -->
+			
+			<!--加上下面的这个Param程序就无法正常运行，我看模板中statemodel就是一个output，一个close，一个call，最后一个call的action中也没有Param这个元素，见下面的Fidld分析-->
+			<Param name="png file" type="in">
+				<DataModel ref="ParamA"/><!--这行我有点没弄懂？去掉可以吗?不能去掉，Action必须要有datamodel-->
+				<!-- 定义输出文件 -->
+				<Data name="filename">
+					<Field name="Value" value="D:\peachFuzzer\peach-3.1.124-win-x64-release\fuzzedCircle.png"/>
+					<!--Field:data的子元素，Field元素指定数据以替换DataModel中数据元素的默认值。-->
+					<!--也就是说用D:\...fuzzedCircle.png来替换value，value也就是40行中的datamodel的Value-->
+					
+					<!--如果这样看的话上面40行的datamodel是不是定义地有点问题，因为哪个datamodel我是为了解决解析报错问题加上去的，所以随便复制上来的，所以应该定义成什么样？...待解决-->
+					<!--所以我将上面这个datamodel ref="Param"改为"ParamA",但不注释action中Param这个元素，发现报ParamA的错？但是我又把action中的Param元素注释掉后，又能正常运行了-->
+					<!--而且有个很奇怪的现象，就是在注释param这个元素的前提下，我把datam的ref命名为Param会经常引起一些错误，但是ParamA则不会？...不知道什么问题-->
+					
+					
+					<!--我在Field中找到了关于这个Param报错的相关信息（http://community.peachfuzzer.com/v3/Field.html）：
+					上一个datamodel ref="Param"确实要在statemodel前定义Param，但官网中的例子，就是单单一个action，里面一个datamodel ref，和一个data field，没有Param这个元素-->
+					<!--我试了一下去掉Param这个元素，确实不会再报错了，但是运行的时候好像还有点问题像卡住了一样...有待解决-->
+					
+					<!--看看是不是action元素里的子元素中是不是没有param这个元素，但是有datamodel？答：经查后，发现action中确实可以有个子元素叫Param-->
+					<!--所以上面所有在注释掉Param元素的实验都有点问题，都应该在不注释掉Param下执行：所以我执行后报ParamA的错，也验证了Param这个元素没有错，并且也验证了上面40行的datam的定义是有问题的-->
+					
+					
+					
+					<!--所以现在关于这个Pit报错的原因就剩下如何定义那个名为param的datamodel了-->
+					<!--其实正常来说就3个action 一个output 一个close 一个call-->
+					<!--根据http://community.peachfuzzer.com/v3/Field.html介绍，40行的datamodel还少个value属性<DataModel name="ParamA"><String name="Value" value="helloworld "token="true" /></DataModel>-->
+					<!--但是我测试了一下不是value的问题，而且如果想一下根本不需要定义value，因为你在Field中反正都要替换的，那这个value是什么值都无所谓了。-->
+					<!--但是必须要有40行的那个datamodel，而且也要有string属性-->
+					<!--而且我不能理解为什么要有这个Field，-->
+				
+				<!--现在假定我40行的datamodel是定义正确的，那这个fuzz png的模板应该就差不多了。-->
+				
+				</Data>
+			</Param>
+			
+		</Action>
+	</State>
+</StateModel>
+
+<!--.................................................................................................-->	
+<Test name="Default"><!--Test元素用于配置特定的模糊测试，将StateModel与Publisher和其他配置选项相结合-->
+	<Agent ref="WinAgent"/>
+	<StateModel ref="TheState"/><!--引用了上面定位的名为Thestate的 StateModel-->
+	<Publisher class="File">
+		<Param name="FileName" value="D:\peachFuzzer\peach-3.1.124-win-x64-release\fuzzedCircle.png"/><!--这个文件会自己生成-->
+	</Publisher>
+	
+	<!--加了日志文件-->
+	<!--文件系统记录器将记录到指定的路径。将创建一个包含运行名称和时间戳的文件夹。这个文件夹里面是实际的日志。在检测到故障之前，记录的信息非常少，以节省磁盘空间。-->
+	<Logger  class = "File" > 
+		<Param  name = "Path"  value = "D:\peachFuzzer\peach-3.1.124-win-x64-release\log" /> 
+	</Logger> 
+</Test>	
+<!--到这里已经可以运行测试了，不过这样子只会生成畸形文件，对于实际应用并没有什么用处。只有加上Agent和Monitor，对分析结果进行监控和日志记录才是最终需要的。 -->
+<!--.................................................................................................-->	
+<Agent name="WinAgent">
+	<Monitor class="WindowsDebugger">
+		<!--在官网的tutorial中，我看agent commandline的valu值等于 CrashableServer.exe 127.0.0.1 4244，这个exe是文件目录下自带的一个-->
+		<Param name="CommandLine" value="C:\Program Files (x86)\2345Soft\2345Pic\2345PicViewer.exe D:\peachFuzzer\peach-3.1.124-win-x64-release\fuzzedCircle.png" />
+<!-- 可以用name值为WinDbgPath的Param来手动指定Windbg的位置 -->
+<!-- 删除LaunchViewer可以不调用GUI界面加快运行速度 -->
+		<!--原模板中是没有windbgPath的，这里我加上了-->
+		<Param name="WinDbgPath" value="C:\Program Files (x86)\Windows Kits\10\Debuggers\x64" />
+		<!--关于windbg路径，在我电脑上只有这个路径能用，我之前因为要装mona，所以安了太多的windbg，以至于我现在也搞不清哪个windbg能用了，测试了一下，只有这个windbg x64能用-->
+		<!--题外话：我在这个路径下安装了mona和其配置，但是还是不能运行，和D:\WinDbg.exe\X86原版\下的x64结果一样，还是do not run this....-->
+		<Param name="StartOnCall" value="LaunchViewer" /><!--在从状态模型进行匹配调用之前，不会附加调试器-->
+		<Param name="CpuKill" value="true" /><!--NoCpuKill  - 不要使用进程CPU使用率提前终止。（可选，默认为false）,在V3中改成了NoCpuKill？-->
+	</Monitor>
+	<Monitor class="PageHeap">
+		<!--这里原模板中是没有windbgPath的，这里我加上了-->
+		<Param name="WinDbgPath" value="C:\Program Files (x86)\Windows Kits\10\Debuggers\x64" />
+		<Param name="Executable" value="C:\Program Files (x86)\2345Soft\2345Pic\2345PicViewer.exe"/><!--要打开页堆的程序-->
+	</Monitor>
+</Agent>
+
+
+
+
+ 
+
+
+
+</Peach>
