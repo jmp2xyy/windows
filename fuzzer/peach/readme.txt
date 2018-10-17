@@ -1,3 +1,6 @@
-<!--10.7���£������м�ƪ����png_fuzz�����£�Png��pit�ļ����¶����һ�������ǹ���peach�Ľ̶̳���V2�汾�ģ������ǿ�ѩ��̳��peach�͡�0day2���Ϲ���peach�Ľ̳̣�����V3�汾�����е��������ͬ-->
-<!--�����ҽ����Peach3�Ĺٷ�tutorial����Ȼ�һ�û��������-_-!�����Դ���template.xmlд�����pit-->
-<!--����ģ����ʵ���е���������ע���ж��ᵽ��-->
+<!--10.7更新：网上有几篇关于png_fuzz的文章，Png的pit文件大致都差不多一样，但是关于peach的教程都是V2版本的，尤其是看雪论坛的peach和《0day2》上关于peach的教程，对于V3版本可能有点出处、不同-->
+<!--所以我结合了Peach3的官方tutorial（虽然我还没看懂多少-_-!）和自带的template.xml写了这个pit-->
+<!--各个模块在实际中的问题我在注释中都提到了-->
+
+[1]黄伟斌. 基于模糊测试技术的网络协议安全性测试[D].中山大学,2013.
+这篇文章介绍fuzzer原理比较多，peachfuzzer fuzz文档和协议不多。就当参考吧
